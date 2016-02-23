@@ -1,0 +1,29 @@
+https://en.wikipedia.org/wiki/Lambda_calculus
+
+Goal: write a lambda calculus reducer.  So that I can show that
+
+Lx.((Lx.x)x) and (Lx.(Lx.x))x reduce to the same value: Lx.x
+
+Remember:
+
+"x", a variable, is a term
+"Lx.t" is a term meaning: a lambda that substutes term t for variable x (typographically!)
+"t1 t2" is a term meaning: the application of t1 to t2 (invoke t1 with t2)
+There are only 1-arity functions.
+Parens are optional for clarity. TODO: what order if no parens?
+
+So
+Lx.((Lx.x)x) 
+becomes
+Lx.(x)
+becomes
+Lx.x
+
+and 
+(Lx.(Lx.x))x 
+becomes
+(   (Lx.x))
+becomes
+(Lx.x)
+becomes
+Lx.x
