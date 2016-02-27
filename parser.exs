@@ -1,18 +1,5 @@
 ExUnit.start
 
-defmodule Assert do
-  defmacro assert {:==, _md, [a, b]}=expr do
-    quote do
-      text = unquote(Macro.to_string(expr))
-      if not (unquote(a) == unquote(b)) do
-        IO.puts "FALSE: '#{unquote(a)}' == #{unquote(Macro.to_string(b))}"
-      else
-        IO.puts "TRUE:  #{unquote(Macro.to_string(b))}"
-      end
-    end
-  end
-end
-
 defmodule Lambda do
   use ExUnit.Case, async: true
 
