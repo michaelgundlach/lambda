@@ -13,8 +13,8 @@ defmodule Lambda do
   def push(stack, x), do: [x | stack]
 
   def to_ast(tokens), do: to_ast(tokens, [])
-  def to_ast([]       , [acc]               ), do: acc |> finish
-  def to_ast([]       , stack               ), do: to_ast([],        stack |> pop)
+  def to_ast([]      , [acc]                ), do: acc |> finish
+  def to_ast([]      , stack                ), do: to_ast([],        stack |> pop)
   def to_ast([")" |t], [[x, :"("] | stack]  ), do: to_ast(t,         [x | stack])
   def to_ast([")" |t], stack                ), do: to_ast([")" | t], stack |> pop)
   def to_ast(["." |t], stack                ), do: to_ast(t,         stack |> pop)
@@ -49,26 +49,32 @@ defmodule Lambda.Test do
   use ExUnit.Case, async: true
   import Lambda
 
-  defmacrop reduce_test(pre, post) do
-    quote do: assert reduce_once(parse(unquote(pre))) == parse(unquote(post))
+  defmacrop reduce_test(fun, pre, post) do
+    quote do
+      assert apply(Lambda, unquote(fun), [parse(unquote(pre))]) == parse(unquote(post))
+    end
+  end
+
+  defmacrop reduce_tests fun do
+    quote do
+      reduce_test unquote(fun), "(Lx.x) y",   "y"
+      reduce_test unquote(fun), "(Lx.z) y",   "z"
+      reduce_test unquote(fun), "(Lx.x z) y", "y z"
+      reduce_test unquote(fun), "(Lx.x x) y", "y y"
+      reduce_test unquote(fun), "(Lx.z z) y", "z z"
+      reduce_test unquote(fun), "(Lx.Lz.x z) y", "Lz.y z"
+      reduce_test unquote(fun), "(Lx.x x)", "(Lx.x x)"
+      reduce_test unquote(fun), "x y", "x y"
+    end
   end
 
   test "reduce" do
-    assert reduce(parse("(Lx.x x) (Lx.x x)")) == parse("(Lx.x x) (Lx.x x)")
-    assert reduce(parse("(Lx.Ly.x y) z w")) == parse("z w")
+    reduce_tests :reduce
+    reduce_test :reduce, "(Lx.Lz.x z) (Lx.x)", "Lz.z"
   end
   test "reduce_once" do
-    reduce_test "(Lx.x) y",   "y"
-    reduce_test "(Lx.z) y",   "z"
-    reduce_test "(Lx.x z) y", "y z"
-    reduce_test "(Lx.x x) y", "y y"
-    reduce_test "(Lx.z z) y", "z z"
-    reduce_test "(Lx.Lz.x z) y", "Lz.y z"
-    reduce_test "(Lx.Lz.x z) (Lx.x)", "Lz.(Lx.x) z"
-    reduce_test "x y", "x y"
-    omega = "(Lx.x x)"
-    oMEGA = "#{omega} #{omega}" # Uppercase omega
-    reduce_test oMEGA, oMEGA
+    reduce_tests :reduce_once
+    reduce_test :reduce_once, "(Lx.Lz.x z) (Lx.x)", "Lz.(Lx.x) z"
   end
 
   test "tokenize" do
