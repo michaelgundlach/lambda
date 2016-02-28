@@ -20,6 +20,7 @@ defmodule Lambda do
   def to_ast(["." |t], stack                ), do: to_ast(t,         stack |> pop)
   def to_ast(["(" |t], stack                ), do: to_ast(t,         stack |> push( [:"("]    ))
   def to_ast(["L" |t], stack                ), do: to_ast(t,         stack |> push( [:L]      ))
+  def to_ast([" " |t], [_, [_,:A] | _]=stack), do: to_ast([" "|t],   stack |> pop)
   def to_ast([" " |t], [acc | stack]        ), do: to_ast(t,         stack |> push( [acc, :A] ))
   def to_ast([x   |t], stack) when is_var(x) , do: to_ast(t,         stack |> push( x         ))
 
@@ -77,6 +78,7 @@ defmodule Lambda.Test do
 
   test "to_ast" do
     thing = {:A, {:L, "x", {:L, "y", "z"}}, {:L, "x", "x"}}
+    assert to_ast(tokenize("a b c")) == to_ast(tokenize("((a b) c)"))
     assert to_ast(tokenize("((Lx.((Ly.((z))))) ((Lx.(x))))")) == thing
     assert to_ast(tokenize("(((Lx.((Ly.((z))))) ((Lx.(x)))))")) == thing
     assert to_ast(tokenize("(Lx.Ly.z) (Lx.x)")) == thing
