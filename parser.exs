@@ -24,17 +24,17 @@ defmodule Lambda do
   def to_ast([" " |t], [acc | stack]        ), do: to_ast(t,         stack |> push( [acc, :A] ))
   def to_ast([x   |t], stack) when is_var(x) , do: to_ast(t,         stack |> push( x         ))
 
-  defp has_A({:A, _, _}),       do: true
-  defp has_A({_, t1, t2}),      do: has_A(t1) or has_A(t2)
-  defp has_A(x) when is_var(x), do: false
+  defp has(op, {op, _, _}),       do: true
+  defp has(op, {_, t1, t2}),      do: has(op, t1) or has(op, t2)
+  defp has(_op, x) when is_var(x), do: false
 
   def as_string(x) when is_var(x), do: x
   def as_string({op, t1, t2}) do
     t1_s = as_string t1
     t2_s = as_string t2
     if op == :A do
-      if has_A(t1), do: t1_s = "(#{t1_s})"
-      if has_A(t2), do: t2_s = "(#{t2_s})"
+      if has(:L, t1), do: t1_s = "(#{t1_s})"
+      if has(:A, t2), do: t2_s = "(#{t2_s})"
       "#{t1_s} #{t2_s}"
     else
       "L#{t1_s}.#{t2_s}"
@@ -71,7 +71,6 @@ defmodule Lambda.Test do
       assert apply(Lambda, unquote(fun), [parse(unquote(pre))]) == parse(unquote(post))
     end
   end
-
   defmacrop reduce_tests fun do
     quote do
       reduce_test unquote(fun), "(Lx.x) y",   "y"
@@ -84,7 +83,6 @@ defmodule Lambda.Test do
       reduce_test unquote(fun), "x y", "x y"
     end
   end
-
   test "reduce" do
     reduce_tests :reduce
     reduce_test :reduce, "(Lx.Lz.x z) (Lx.x)", "Lz.z"
@@ -109,10 +107,10 @@ defmodule Lambda.Test do
   end
 
   test "to_ast" do
-    thing = {:A, {:L, "x", {:L, "y", "z"}}, {:L, "x", "x"}}
     assert to_ast(tokenize("a b c")) == to_ast(tokenize("((a b) c)"))
     assert to_ast(tokenize("x (Ly.y) z")) == to_ast(tokenize("(x Ly.y) z"))
     assert to_ast(tokenize("x Ly.y z")) == to_ast(tokenize("x (Ly.y z)"))
+    thing = {:A, {:L, "x", {:L, "y", "z"}}, {:L, "x", "x"}}
     assert to_ast(tokenize("((Lx.((Ly.((z))))) ((Lx.(x))))")) == thing
     assert to_ast(tokenize("(((Lx.((Ly.((z))))) ((Lx.(x)))))")) == thing
     assert to_ast(tokenize("(Lx.Ly.z) (Lx.x)")) == thing
@@ -126,14 +124,20 @@ defmodule Lambda.Test do
     assert parse("Lx.x") == tokenize("Lx.x") |> to_ast
   end
 
-  defmacrop test_as_string_with(expr) do
-    quote do: assert as_string(parse(unquote(expr))) == unquote(expr)
+  defmacrop test_is_normalized(expr) do
+    quote do: assert (unquote(expr) |> parse |> as_string) == unquote(expr)
   end
   test "as_string" do
-    test_as_string_with "Lx.x"
-    test_as_string_with "x Lx.x"
-    test_as_string_with "(x Lx.x) Ly.y"
-    test_as_string_with        "Lg.(Lx.g (x x)) (Lx.g (x x))"
-    test_as_string_with "(Lz.Lw.Lg.(Lx.g (x x)) (Lx.g (x x))) Lx.x"
+    # Parse and unparse the given normalized strings.  Because as_string is
+    # normalizing, we should get back the same string from |> parse |> as_string.
+    test_is_normalized "a b"
+    test_is_normalized "a b c"
+    test_is_normalized "Lx.x"
+    test_is_normalized "x Lx.x"
+    test_is_normalized "(Lx.x) y"
+    test_is_normalized "Lx.x y"
+    test_is_normalized "(x Lx.x) Ly.y"
+    test_is_normalized        "Lg.(Lx.g (x x)) (Lx.g (x x))"
+    test_is_normalized "(Lz.Lw.Lg.(Lx.g (x x)) (Lx.g (x x))) Lx.x"
   end
 end
