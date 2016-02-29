@@ -1,8 +1,8 @@
-https://en.wikipedia.org/wiki/Lambda_calculus
-
-Goal: write a lambda calculus reducer.  So that I can show that
+Goal: write a lambda calculus parser and reducer.
 
 Lx.((Lx.x)x) and (Lx.(Lx.x))x reduce to the same value: Lx.x
+
+https://en.wikipedia.org/wiki/Lambda_calculus
 
 Remember:
 
@@ -12,90 +12,3 @@ Remember:
 There are only 1-arity functions.
 Parens are optional for clarity.
 s t r = ((s t) r)
-
-So
-Lx.((Lx.x)x) 
-(Lx.(Ly.x y)) w
-
-(Lx.Ly.x + y) 4
-(Ly.4 + y) 3
-4 + 3
-
-(Lx.Ly.x y)
-
-(Lx.((x y) z))
-
-[L, x, [L, y, [S, x, y]]]
-
-(Lx.x) (Lx.x)
-x
-[{:t, x}]  []
-Lx.x
-{:L, x, {:t, x}}
-
-x x
-{:S {:t, x} {:t, x}}
-
-(x)
-{:t, x}
-
-(Lx.x) y
-{:S {:L x {:t, x}} {:t, y}}
-
-x, stack -> [ [x] | stack ]
-L.x, stack -> [ [L x] | stack ]
-' ', stack -> [ [S t(hd(stack))] | tl(stack) ]
-(, stack -> [ [(] | stack ]
-), [ x, '(' | stack] -> [ t(x) | stack ]
-), [ x, y | stack] -> repeat with [ [t(x) | y] | stack ]
-eol, [x | y | stack] -> repeat with [ [t(x) | y] | stack ]
-eol, [x] -> ANSWER IS t(x)
-
-
-
-becomes
-Lx.(x)
-becomes
-Lx.x
-
-and 
-(Lx.(Lx.x))x 
-becomes
-(   (Lx.x))
-becomes
-(Lx.x)
-becomes
-Lx.x
-
-variables don't escape their lambda scope: ie these are equivalent:
-Lx.Lx.x
-and
-Ly.Lx.x
-and
-L L 1 (De bruijn index)
-
-Forms:
-v := ["a"-"z"]
-T := v | F | A | P
-F := Lv.T
-A := T T
-P := (T)
-
-Association is left-assoc.  Dots are right-assoc.
-So if there are multiple dots, we can paren them:
-Lx.Ly.z -> Lx.(Ly.z)
-
-Normalizing steps:
-T                     P if T is not a P
-T T T                 (T T) T
-Lv.T                  Lv.(v)
-Lx.Ly.y               Lx.Ly.(y)
-x x                   (x x)
-Lx.--- -> Lx.(---) all the way to too-many )'s or the end of the line.
-
-
-Lx.Ly.x y Lz.z
-
-Lx.y Lz.z
-
-(Lx.y) z
