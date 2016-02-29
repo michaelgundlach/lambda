@@ -1,14 +1,35 @@
-Goal: write a lambda calculus parser and reducer.
+Lambda calculus parser/unparser and reducer.
 
-Lx.((Lx.x)x) and (Lx.(Lx.x))x reduce to the same value: Lx.x
+Demo:
 
-https://en.wikipedia.org/wiki/Lambda_calculus
+```
+iex(8)> import Lambda
+iex(9)> expr = "(Lx.Ly.x (y z)) w"
+iex(10)> expr |> tokenize
+["(", "L", "x", ".", "L", "y", ".", "x", " ", "(", "y", " ", "z", ")", ")", " ", "w"]
+iex(11)> expr |> tokenize |> to_ast
+{:A, {:L, "x", {:L, "y", {:A, "x", {:A, "y", "z"}}}}, "w"}
+iex(12)> parse(expr) == to_ast(tokenize(expr))
+true
+iex(13)> expr |> parse |> as_string
+"(Lx.Ly.x (y z)) w"
+iex(14)> expr |> parse |> reduce_once
+{:L, "y", {:A, "w", {:A, "y", "z"}}}
+iex(15)> expr |> parse |> reduce_once |> as_string
+"Ly.w (y z)"
 
-Remember:
+iex(22)> "((Lx.Ly.x (y z)) a) b" |> parse |> reduce |> as_string
+"a (b z)"
 
-"x", a variable, is a term
-"Lx.t" is a term meaning: a lambda that substutes term t for variable x (typographically!)
-"t1 t2" is a term meaning: the application of t1 to t2 (invoke t1 with t2)
-There are only 1-arity functions.
-Parens are optional for clarity.
-s t r = ((s t) r)
+iex(16)> y_combinator = "Lg.(Lx.g (x x)) (Lx.g (x x))"
+"Lg.(Lx.g (x x)) (Lx.g (x x))"
+iex(17)> y_combinator |> parse |> reduce_once |> as_string
+"Lg.g ((Lx.g (x x)) (Lx.g (x x)))"
+iex(18)> y_combinator |> parse |> reduce(2) |> as_string
+"Lg.g (g ((Lx.g (x x)) (Lx.g (x x))))"
+iex(20)> y_combinator |> parse |> reduce(4) |> as_string
+"Lg.g (g (g (g ((Lx.g (x x)) (Lx.g (x x))))))"
+
+iex(21)> "(Lx.x x) (Lx.x x)" |> parse |> reduce(100) |> as_string
+"(Lx.x x) (Lx.x x)"
+```

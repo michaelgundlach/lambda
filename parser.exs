@@ -3,14 +3,14 @@ ExUnit.start
 defmodule Lambda do
   def tokenize(string_expr), do: string_expr |> String.codepoints
 
-  defmacro is_var(x), do: quote(do: unquote(x) >= "a" and unquote(x) <= "z")
+  defmacrop is_var(x), do: quote(do: unquote(x) >= "a" and unquote(x) <= "z")
 
-  def finish([t, x, :L]      ), do: {:L, finish(x), finish(t)}
-  def finish([t2, t1, :A]    ), do: {:A, finish(t1), finish(t2)}
-  def finish(x) when is_var(x), do: x
+  defp finish([t, x, :L]      ), do: {:L, finish(x), finish(t)}
+  defp finish([t2, t1, :A]    ), do: {:A, finish(t1), finish(t2)}
+  defp finish(x) when is_var(x), do: x
 
-  def pop([acc, h | t]), do: [[acc|h] | t]
-  def push(stack, x), do: [x | stack]
+  defp pop([acc, h | t]), do: [[acc|h] | t]
+  defp push(stack, x), do: [x | stack]
 
   def to_ast(tokens), do: to_ast(tokens, [])
   def to_ast([]      , [acc]                ), do: acc |> finish
@@ -54,9 +54,9 @@ defmodule Lambda do
     end
   end
 
-  def sub(old, new, {:A, t1, t2}), do: {:A, sub(old, new, t1), sub(old, new, t2)}
-  def sub(old, new, {:L, v,   t}), do: {:L, v, (if old == v, do: t, else: sub(old, new, t))}
-  def sub(old, new, var) when is_var(var), do: if var == old, do: new, else: var
+  defp sub(old, new, {:A, t1, t2}), do: {:A, sub(old, new, t1), sub(old, new, t2)}
+  defp sub(old, new, {:L, v,   t}), do: {:L, v, (if old == v, do: t, else: sub(old, new, t))}
+  defp sub(old, new, var) when is_var(var), do: if var == old, do: new, else: var
 
   def parse(string_expr), do: string_expr |> tokenize |> to_ast
 
