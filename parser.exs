@@ -1,7 +1,7 @@
 ExUnit.start
 
 defmodule Lambda do
-  def tokenize(term), do: term |> String.codepoints
+  def tokenize(string_expr), do: string_expr |> String.codepoints
 
   defmacro is_var(x), do: quote(do: unquote(x) >= "a" and unquote(x) <= "z")
 
@@ -41,7 +41,7 @@ defmodule Lambda do
   def sub(old, new, {:L, v,   t}), do: {:L, v, (if old == v, do: t, else: sub(old, new, t))}
   def sub(old, new, var) when is_var(var), do: if var == old, do: new, else: var
 
-  def parse(term), do: term |> tokenize |> to_ast
+  def parse(string_expr), do: string_expr |> tokenize |> to_ast
 
 end
 
@@ -71,6 +71,15 @@ defmodule Lambda.Test do
   test "reduce" do
     reduce_tests :reduce
     reduce_test :reduce, "(Lx.Lz.x z) (Lx.x)", "Lz.z"
+    inner = "((Lx.g (x x)) (Lx.g (x x)))"
+    # Derivations per wikipedia article on Lambda calculus
+    y = "(Lg.#{inner})"
+    y_g_reduced_once = reduce(parse("#{y} g"), 1)
+    y_g_reduced_twice = reduce(parse("#{y} g"), 2)
+    assert y_g_reduced_once == parse(inner)
+    assert y_g_reduced_twice == parse("g #{inner}")
+    # Y g = g (Y g)
+    assert y_g_reduced_twice == {:A, "g", y_g_reduced_once}
   end
   test "reduce_once" do
     reduce_tests :reduce_once
