@@ -1,7 +1,7 @@
 ExUnit.start
 
 defmodule Lambda do
-  def tokenize(string_expr), do: string_expr |> String.codepoints
+  def tokenize(string_expr), do: string_expr |> String.replace("L", "λ") |> String.codepoints
 
   defmacrop is_var(x), do: quote(do: unquote(x) >= "a" and unquote(x) <= "z")
 
@@ -19,7 +19,7 @@ defmodule Lambda do
   def to_ast([")" |t], stack                ), do: to_ast([")" | t], stack |> pop)
   def to_ast(["." |t], stack                ), do: to_ast(t,         stack |> pop)
   def to_ast(["(" |t], stack                ), do: to_ast(t,         stack |> push( [:"("]    ))
-  def to_ast(["L" |t], stack                ), do: to_ast(t,         stack |> push( [:L]      ))
+  def to_ast(["λ" |t], stack                ), do: to_ast(t,         stack |> push( [:L]      ))
   def to_ast([" " |t], [_, [_,:A] | _]=stack), do: to_ast([" "|t],   stack |> pop)
   def to_ast([" " |t], [acc | stack]        ), do: to_ast(t,         stack |> push( [acc, :A] ))
   def to_ast([x   |t], stack) when is_var(x) , do: to_ast(t,         stack |> push( x         ))
@@ -37,7 +37,7 @@ defmodule Lambda do
       if has(:A, t2), do: t2_s = "(#{t2_s})"
       "#{t1_s} #{t2_s}"
     else
-      "L#{t1_s}.#{t2_s}"
+      "λ#{t1_s}.#{t2_s}"
     end
   end
 
@@ -73,22 +73,22 @@ defmodule Lambda.Test do
   end
   defmacrop reduce_tests fun do
     quote do
-      reduce_test unquote(fun), "(Lx.x) y",   "y"
-      reduce_test unquote(fun), "(Lx.z) y",   "z"
-      reduce_test unquote(fun), "(Lx.x z) y", "y z"
-      reduce_test unquote(fun), "(Lx.x x) y", "y y"
-      reduce_test unquote(fun), "(Lx.z z) y", "z z"
-      reduce_test unquote(fun), "(Lx.Lz.x z) y", "Lz.y z"
-      reduce_test unquote(fun), "(Lx.x x)", "(Lx.x x)"
+      reduce_test unquote(fun), "(λx.x) y",   "y"
+      reduce_test unquote(fun), "(λx.z) y",   "z"
+      reduce_test unquote(fun), "(λx.x z) y", "y z"
+      reduce_test unquote(fun), "(λx.x x) y", "y y"
+      reduce_test unquote(fun), "(λx.z z) y", "z z"
+      reduce_test unquote(fun), "(λx.λz.x z) y", "λz.y z"
+      reduce_test unquote(fun), "(λx.x x)", "(λx.x x)"
       reduce_test unquote(fun), "x y", "x y"
     end
   end
   test "reduce" do
     reduce_tests :reduce
-    reduce_test :reduce, "(Lx.Lz.x z) (Lx.x)", "Lz.z"
-    inner = "((Lx.g (x x)) (Lx.g (x x)))"
+    reduce_test :reduce, "(λx.λz.x z) (λx.x)", "λz.z"
+    inner = "((λx.g (x x)) (λx.g (x x)))"
     # Derivations per wikipedia article on Lambda calculus
-    y = "(Lg.#{inner})"
+    y = "(λg.#{inner})"
     y_g_reduced_once = reduce(parse("#{y} g"), 1)
     y_g_reduced_twice = reduce(parse("#{y} g"), 2)
     assert y_g_reduced_once == parse(inner)
@@ -98,30 +98,30 @@ defmodule Lambda.Test do
   end
   test "reduce_once" do
     reduce_tests :reduce_once
-    reduce_test :reduce_once, "(Lx.Lz.x z) (Lx.x)", "Lz.(Lx.x) z"
+    reduce_test :reduce_once, "(λx.λz.x z) (λx.x)", "λz.(λx.x) z"
   end
 
   test "tokenize" do
-    assert tokenize("Lx.x") == ["L", "x", ".", "x"]
-    assert tokenize("Lx.x y") == ["L", "x", ".", "x", " ", "y"]
+    assert tokenize("λx.x") == ["λ", "x", ".", "x"]
+    assert tokenize("λx.x y") == ["λ", "x", ".", "x", " ", "y"]
   end
 
   test "to_ast" do
     assert to_ast(tokenize("a b c")) == to_ast(tokenize("((a b) c)"))
-    assert to_ast(tokenize("x (Ly.y) z")) == to_ast(tokenize("(x Ly.y) z"))
-    assert to_ast(tokenize("x Ly.y z")) == to_ast(tokenize("x (Ly.y z)"))
+    assert to_ast(tokenize("x (λy.y) z")) == to_ast(tokenize("(x λy.y) z"))
+    assert to_ast(tokenize("x λy.y z")) == to_ast(tokenize("x (λy.y z)"))
     thing = {:A, {:L, "x", {:L, "y", "z"}}, {:L, "x", "x"}}
-    assert to_ast(tokenize("((Lx.((Ly.((z))))) ((Lx.(x))))")) == thing
-    assert to_ast(tokenize("(((Lx.((Ly.((z))))) ((Lx.(x)))))")) == thing
-    assert to_ast(tokenize("(Lx.Ly.z) (Lx.x)")) == thing
-    assert to_ast(tokenize("(Lx.x) (Lx.x)")) == {:A, {:L, "x", "x"}, {:L, "x", "x"}}
+    assert to_ast(tokenize("((λx.((λy.((z))))) ((λx.(x))))")) == thing
+    assert to_ast(tokenize("(((λx.((λy.((z))))) ((λx.(x)))))")) == thing
+    assert to_ast(tokenize("(λx.λy.z) (λx.x)")) == thing
+    assert to_ast(tokenize("(λx.x) (λx.x)")) == {:A, {:L, "x", "x"}, {:L, "x", "x"}}
     assert to_ast(tokenize("x y")) == {:A, "x", "y"}
-    assert to_ast(tokenize("Lx.x")) == {:L, "x", "x"}
-    assert to_ast(tokenize("(Lx.x)")) == {:L, "x", "x"}
+    assert to_ast(tokenize("λx.x")) == {:L, "x", "x"}
+    assert to_ast(tokenize("(λx.x)")) == {:L, "x", "x"}
   end
 
   test "parse" do
-    assert parse("Lx.x") == tokenize("Lx.x") |> to_ast
+    assert parse("λx.x") == tokenize("λx.x") |> to_ast
   end
 
   defmacrop test_is_normalized(expr) do
@@ -132,12 +132,12 @@ defmodule Lambda.Test do
     # normalizing, we should get back the same string from |> parse |> as_string.
     test_is_normalized "a b"
     test_is_normalized "a b c"
-    test_is_normalized "Lx.x"
-    test_is_normalized "x Lx.x"
-    test_is_normalized "(Lx.x) y"
-    test_is_normalized "Lx.x y"
-    test_is_normalized "(x Lx.x) Ly.y"
-    test_is_normalized        "Lg.(Lx.g (x x)) (Lx.g (x x))"
-    test_is_normalized "(Lz.Lw.Lg.(Lx.g (x x)) (Lx.g (x x))) Lx.x"
+    test_is_normalized "λx.x"
+    test_is_normalized "x λx.x"
+    test_is_normalized "(λx.x) y"
+    test_is_normalized "λx.x y"
+    test_is_normalized "(x λx.x) λy.y"
+    test_is_normalized        "λg.(λx.g (x x)) (λx.g (x x))"
+    test_is_normalized "(λz.λw.λg.(λx.g (x x)) (λx.g (x x))) λx.x"
   end
 end
