@@ -94,6 +94,8 @@ defmodule Lambda.Test do
   test "to_ast" do
     thing = {:A, {:L, "x", {:L, "y", "z"}}, {:L, "x", "x"}}
     assert to_ast(tokenize("a b c")) == to_ast(tokenize("((a b) c)"))
+    assert to_ast(tokenize("x (Ly.y) z")) == to_ast(tokenize("(x Ly.y) z"))
+    assert to_ast(tokenize("x Ly.y z")) == to_ast(tokenize("x (Ly.y z)"))
     assert to_ast(tokenize("((Lx.((Ly.((z))))) ((Lx.(x))))")) == thing
     assert to_ast(tokenize("(((Lx.((Ly.((z))))) ((Lx.(x)))))")) == thing
     assert to_ast(tokenize("(Lx.Ly.z) (Lx.x)")) == thing
